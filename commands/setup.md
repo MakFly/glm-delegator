@@ -12,8 +12,11 @@ Configure MCP servers and install orchestration rules for claude-delegator.
 Run these checks in parallel:
 
 ```bash
-# Check Bun
-which bun 2>/dev/null && echo "BUN_VERSION=$(bun --version)" || echo "BUN_MISSING"
+# Check package managers (in order of preference)
+which bun 2>/dev/null && echo "PKG_MANAGER=bun" || \
+which npm 2>/dev/null && echo "PKG_MANAGER=npm" || \
+which yarn 2>/dev/null && echo "PKG_MANAGER=yarn" || \
+echo "PKG_MANAGER=NONE"
 ```
 
 ```bash
@@ -30,16 +33,25 @@ which gemini 2>/dev/null && echo "GEMINI_VERSION=$(gemini --version 2>&1 | head 
 
 | Missing | Action |
 |---------|--------|
-| Bun | Tell user: `curl -fsSL https://bun.sh/install \| bash` then restart terminal |
+| No package manager | Tell user to install Node.js from https://nodejs.org (includes npm) |
 | Codex | Tell user: `npm install -g @openai/codex` |
 | Gemini | Tell user: `npm install -g @google/gemini-cli` |
 
-**If Bun is missing, STOP here.** The MCP server requires Bun.
+**If no package manager is found, STOP here.** The MCP server requires npm, yarn, or bun.
 
 ## Step 2: Install Gemini MCP Dependencies
 
+Use the detected package manager:
+
 ```bash
+# If bun
 cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && bun install 2>&1
+
+# If npm
+cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && npm install 2>&1
+
+# If yarn
+cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && yarn install 2>&1
 ```
 
 If this fails, report the error and stop.
@@ -52,8 +64,9 @@ cat ~/.claude/settings.json 2>/dev/null || echo "{}"
 
 ## Step 4: Configure MCP Servers
 
-Merge the following into `~/.claude/settings.json`:
+Merge the following into `~/.claude/settings.json`. Use the config based on detected package manager:
 
+**If bun:**
 ```json
 {
   "mcpServers": {
@@ -66,6 +79,24 @@ Merge the following into `~/.claude/settings.json`:
       "type": "stdio",
       "command": "bun",
       "args": ["run", "${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp/src/index.ts"]
+    }
+  }
+}
+```
+
+**If npm or yarn:**
+```json
+{
+  "mcpServers": {
+    "codex": {
+      "type": "stdio",
+      "command": "codex",
+      "args": ["mcp-server"]
+    },
+    "gemini": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp/src/index.ts"]
     }
   }
 }
@@ -101,9 +132,9 @@ Display this summary:
 ├──────────────────────────────────────────────────┤
 │                                                   │
 │  Prerequisites                                    │
-│  ├─ Bun:        [✓ v1.x.x / ✗ Missing]           │
-│  ├─ Codex CLI:  [✓ Installed / ✗ Missing]        │
-│  └─ Gemini CLI: [✓ Installed / ✗ Missing]        │
+│  ├─ Package Manager: [✓ bun/npm/yarn / ✗ None]   │
+│  ├─ Codex CLI:       [✓ Installed / ✗ Missing]   │
+│  └─ Gemini CLI:      [✓ Installed / ✗ Missing]   │
 │                                                   │
 │  Installation                                     │
 │  ├─ MCP Config:   ~/.claude/settings.json        │

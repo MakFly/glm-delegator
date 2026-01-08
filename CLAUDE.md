@@ -9,17 +9,18 @@ A Claude Code plugin that provides external AI models (GPT via Codex, Gemini) as
 ## Development Commands
 
 ```bash
-# Install dependencies (from repo root)
-cd servers/gemini-mcp && bun install
+# Install dependencies (use any package manager)
+cd servers/gemini-mcp && npm install  # or bun/yarn
 
 # Run MCP server locally
-bun run servers/gemini-mcp/src/index.ts
+npx tsx servers/gemini-mcp/src/index.ts  # Node.js
+bun run servers/gemini-mcp/src/index.ts  # Bun
 
 # Test plugin installation
 /claude-delegator:setup
 ```
 
-No build step - Bun runs TypeScript directly.
+No build step required - runs TypeScript directly via tsx or Bun.
 
 ## Architecture
 
@@ -46,15 +47,19 @@ User Request → Claude Code → [Phase 0: Delegation Check]
 | Prompts | `prompts/*.md` | Read at runtime | Shapes external model behavior |
 | Commands | `commands/*.md` | Plugin namespace | `/setup`, `/configure` |
 
-### MCP Server Internals (`servers/gemini-mcp/src/index.ts`)
+### MCP Server Internals (`servers/gemini-mcp/src/`)
 
-Key behaviors:
-- `buildArgs()` (line 133): Constructs CLI args, injects role prompts
-- `runGemini()` (line 162): Spawns process, handles timeout via `didTimeout` flag
-- `activeProcesses` Set (line 160): Tracks processes for cleanup on SIGINT/SIGTERM
-- Role injection (lines 143-148): Prepends prompt from `prompts/{role}.md`
+Entry point: `index.ts` → calls `startServer()` from `server.ts`
+
+Key functions in `server.ts`:
+- `buildArgs()`: Constructs CLI args, injects role prompts
+- `runGemini()`: Spawns process via Node.js `child_process.spawn()`, handles timeout
+- `activeProcesses` Set: Tracks processes for cleanup on SIGINT/SIGTERM
+- `loadRolePrompt()`: Reads prompt from `prompts/{role}.md`
 
 The `-reply` tool does NOT inject roles - it continues existing conversations.
+
+**Runtime compatibility**: Works with Node.js (via `npx tsx`), Bun, or any Node-compatible runtime.
 
 ### Role → Provider Mapping
 

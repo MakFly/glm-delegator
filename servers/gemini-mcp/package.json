@@ -5,13 +5,19 @@
   "type": "module",
   "main": "src/index.ts",
   "scripts": {
-    "start": "bun run src/index.ts",
-    "dev": "bun --watch src/index.ts"
+    "start": "npx tsx src/index.ts",
+    "start:bun": "bun run src/index.ts",
+    "dev": "npx tsx --watch src/index.ts",
+    "test": "npx vitest run",
+    "test:coverage": "npx vitest run --coverage"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "tsx": "^4.7.0"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^2.1.9",
+    "vitest": "^2.1.9"
   }
 }
