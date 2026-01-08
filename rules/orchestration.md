@@ -1,6 +1,6 @@
 # Multi-Model Orchestration
 
-You have access to external AI models via MCP tools. Use them autonomously based on these guidelines.
+You have access to external AI models via MCP tools. Use them when they genuinely add value.
 
 ## Available Tools
 
@@ -11,103 +11,125 @@ You have access to external AI models via MCP tools. Use them autonomously based
 | `mcp__gemini__gemini` | Gemini | Research, docs, frontend, multimodal |
 | `mcp__gemini__gemini-reply` | Gemini | Continue Gemini conversation |
 
-## Phase 0: Delegation Check (EVERY message)
+---
 
-Before classifying a request, check if delegation would help:
+## When Delegation Actually Adds Value
 
-| Signal | Action |
-|--------|--------|
-| External library/framework question | Delegate to Gemini (librarian role) |
-| Complex architecture decision | Delegate to GPT (oracle role) |
-| UI/UX implementation request | Delegate to Gemini (frontend-engineer role) |
-| 2+ failed fix attempts on same issue | Escalate to GPT for fresh perspective |
-| User explicitly asks for external opinion | Honor the request immediately |
-| Research-heavy task (docs, best practices) | Delegate to Gemini |
-| Security/performance analysis | Delegate to GPT |
+Be honest about when external models help vs. when your native tools are better.
 
-## Response Handling (MANDATORY)
+### Use External Models When:
+
+| Scenario | Why It Helps |
+|----------|--------------|
+| **User explicitly requests** | "Ask GPT", "Get Gemini's opinion" - honor the request |
+| **Fresh perspective after failures** | 2+ failed attempts - different model may see what you missed |
+| **Multimodal analysis** | Gemini can analyze images/PDFs differently |
+| **Second opinion on critical decisions** | High-stakes architecture, security - verification matters |
+| **User trusts specific model** | Some users prefer GPT/Gemini for certain domains |
+
+### Use Your Native Tools When:
+
+| Scenario | Why Native is Better |
+|----------|---------------------|
+| **Library research** | You have context7, WebSearch, exa - better integration |
+| **Codebase questions** | You have LSP, Grep, Glob - direct access |
+| **Simple code review** | You can read and analyze code directly |
+| **Documentation lookup** | WebFetch + WebSearch are faster |
+| **Quick best practices** | You already know common patterns |
+
+### The Honest Truth
+
+External delegation adds:
+- **Latency** (10-60+ seconds for a response)
+- **Cost** (API calls aren't free)
+- **Context loss** (external model doesn't see conversation history)
+
+Only delegate when the benefit outweighs these costs.
+
+---
+
+## When to Delegate (Decision Tree)
+
+```
+User explicitly asks for external model?
+  → YES: Delegate immediately
+  → NO: Continue...
+
+Is this a multimodal task (image/PDF analysis)?
+  → YES: Consider Gemini
+  → NO: Continue...
+
+Have you failed 2+ times on the same issue?
+  → YES: Suggest escalation to GPT (ask user first)
+  → NO: Continue...
+
+Is this a critical/high-stakes decision where verification matters?
+  → YES: Consider parallel consultation
+  → NO: Continue...
+
+Can you answer this with your native tools?
+  → YES: Don't delegate. Just answer.
+  → NO: Consider delegation
+```
+
+---
+
+## Response Handling
 
 When external model returns a response:
 
-1. **ALWAYS synthesize** - Never show raw output directly
-2. **Extract insights** - Pull out key recommendations, concerns, code snippets
-3. **Apply judgment** - External models can be wrong; evaluate their suggestions
-4. **Disagree when warranted** - If you spot issues, say so and explain why
-5. **Integrate with context** - Connect their response to the user's specific situation
-
-### Example Synthesis
+1. **Synthesize** - Don't show raw output
+2. **Evaluate** - External models can be wrong
+3. **Disagree when warranted** - If you spot issues, say so
+4. **Connect to context** - Apply their response to user's situation
 
 ```
-External model said: [summary of their response]
+GPT's analysis: [summary]
 
 Key points:
 - [insight 1]
 - [insight 2]
 
-My assessment: [your evaluation, any disagreements, how this applies to the task]
+My assessment: [your evaluation, where you agree/disagree]
 ```
+
+---
 
 ## Delegation Prompt Structure
 
-**Core rule**: Include enough context for the question to be answerable without follow-ups.
+**Core rule**: Include enough context for the question to be answerable.
 
 Simple questions get simple prompts. Complex questions need more structure.
 
-For complex tasks, consider including:
+See `delegation-format.md` for examples.
 
-```
-TASK: [What you need - one sentence]
-
-CONTEXT:
-- [Relevant background, code snippets, what's been tried]
-
-CONSTRAINTS: [if any]
-
-EXPECTED OUTPUT: [format you want back]
-```
-
-See `delegation-format.md` for examples and guidelines.
-
-## Parallel Consultation
-
-For critical decisions, you MAY consult both models in parallel:
-
-```typescript
-// Call both simultaneously for important architectural decisions
-mcp__codex__codex({ prompt: "Analyze architecture tradeoffs..." })
-mcp__gemini__gemini({ prompt: "Research implementation patterns..." })
-```
-
-Then synthesize their recommendations into a unified approach:
-- GPT for architectural reasoning and tradeoffs
-- Gemini for implementation patterns and best practices
-- Your synthesis: combine both perspectives with your own judgment
+---
 
 ## Escalation Pattern
 
-After 2+ consecutive failures on the same issue:
+After 2+ consecutive failures:
 
-1. **Document what you've tried** - List approaches and why they failed
-2. **Suggest escalation** - "I've tried X and Y without success. Should I escalate to GPT for a fresh perspective?"
-3. **Wait for user approval** - Don't escalate automatically
-4. **Provide full context** - When escalating, include failure history
+1. Document what you tried
+2. **Ask user**: "I've tried X and Y without success. Want me to get GPT's perspective?"
+3. Wait for approval
+4. Include failure history when delegating
+
+---
 
 ## Cost Awareness
 
-External model calls cost money. Use them strategically:
+- **GPT is expensive** - Reserve for architecture, security, verified second opinions
+- **Gemini is cheaper** - More reasonable for research tasks
+- **Your native tools are free** - Prefer them when equally capable
 
-- **Don't spam** - One well-structured delegation beats five vague ones
-- **GPT is expensive** - Reserve for architecture, security, complex debugging
-- **Gemini is cheaper** - Use freely for research, docs, frontend work
-- **Avoid redundant calls** - If you already have the answer, don't delegate
+---
 
 ## Anti-Patterns
 
-| Don't Do This | Do This Instead |
-|---------------|-----------------|
+| Don't | Do |
+|-------|-----|
 | Delegate trivial questions | Answer directly |
+| Auto-delegate library questions | Use context7/WebSearch first |
 | Show raw external output | Synthesize and interpret |
-| Delegate without context | Include enough context to answer |
-| Ignore external model errors | Investigate and retry or escalate |
-| Spam multiple calls | One structured call |
-| Auto-escalate without asking | Suggest escalation, wait for approval |
+| Auto-escalate without asking | Suggest, then wait for approval |
+| Delegate what you can answer | Only delegate when it adds value |
