@@ -27,21 +27,6 @@
       },
       "roles": ["librarian", "frontend-engineer", "explore"],
       "strengths": ["research", "documentation", "frontend", "multimodal"]
-    },
-    "ollama": {
-      "name": "Ollama (Local)",
-      "description": "Local models via Ollama",
-      "cli": "ollama",
-      "install": "https://ollama.ai/download",
-      "auth": null,
-      "mcp": {
-        "type": "stdio",
-        "command": "bun",
-        "args": ["run", "${PLUGIN_ROOT}/servers/generic-mcp/src/index.ts", "--cli", "ollama"]
-      },
-      "roles": [],
-      "strengths": ["offline", "privacy", "experimentation"],
-      "status": "coming-soon"
     }
   },
   "defaults": {

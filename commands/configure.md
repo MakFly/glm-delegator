@@ -7,7 +7,7 @@ arguments:
     description: "Action: add, remove, list, test"
   - name: provider
     type: string
-    description: "Provider: codex, gemini, ollama, custom"
+    description: "Provider: codex, gemini, custom"
 ---
 
 # Configure
@@ -18,7 +18,7 @@ Manage model providers for claude-delegator.
 
 Get `action` and `provider` from arguments:
 - `action`: add | remove | list | test
-- `provider`: codex | gemini | ollama | custom
+- `provider`: codex | gemini | custom
 
 If no arguments provided, ask:
 
@@ -112,21 +112,6 @@ Add to `~/.claude/settings.json`:
   }
 }
 ```
-
-### add ollama
-
-Check if ollama is installed:
-```bash
-which ollama && ollama --version
-```
-
-**Note**: Ollama requires the generic MCP wrapper. Check if it exists:
-```bash
-ls ${CLAUDE_PLUGIN_ROOT}/servers/generic-mcp/src/index.ts
-```
-
-If generic wrapper exists, configure. Otherwise, tell user:
-"The generic MCP wrapper is needed for Ollama. This feature is coming soon."
 
 ### add custom
 
