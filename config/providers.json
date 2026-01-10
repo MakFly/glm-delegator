@@ -9,7 +9,7 @@
       "mcp": {
         "type": "stdio",
         "command": "codex",
-        "args": ["mcp-server"]
+        "args": ["-m", "gpt-5.2-codex", "mcp-server"]
       },
       "roles": ["oracle", "momus"],
       "strengths": ["architecture", "debugging-escalation", "code-review", "security", "tradeoff-analysis"],

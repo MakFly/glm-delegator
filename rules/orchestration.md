@@ -6,86 +6,209 @@ You have access to GPT via MCP tools. Use it strategically based on these guidel
 
 | Tool | Provider | Use For |
 |------|----------|---------|
-| `mcp__codex__codex` | GPT | Architecture, debugging, code review, security |
-| `mcp__codex__codex-reply` | GPT | Continue GPT conversation |
+| `mcp__codex__codex` | GPT | Start new delegation (Worker, Oracle, or Momus) |
+| `mcp__codex__codex-reply` | GPT | Continue conversation (retry failures, follow-up) |
 
-## Phase 0: Delegation Check (EVERY message)
+---
 
-Before classifying a request, check if delegation would help:
+## Three-Role Model
 
-| Signal | Action |
-|--------|--------|
-| Complex architecture decision | Delegate to GPT (oracle role) |
-| 2+ failed fix attempts on same issue | Escalate to GPT for fresh perspective |
-| User explicitly asks for external opinion | Honor the request immediately |
-| Security/performance analysis | Delegate to GPT (oracle role) |
-| Work plan needs validation | Delegate to GPT (momus role) |
+| Role | Purpose | Sandbox | Approval | Response Handling |
+|------|---------|---------|----------|-------------------|
+| **Worker** | Execute implementation tasks | `workspace-write` | `on-failure` | Verify then report |
+| **Oracle** | Strategic advice, architecture | `read-only` | `on-request` | Synthesize |
+| **Momus** | Plan validation, critique | `read-only` | `on-request` | Synthesize |
 
-## Response Handling (MANDATORY)
+---
 
-When external model returns a response:
+## Phase 0: Role Detection (EVERY message)
 
-1. **ALWAYS synthesize** - Never show raw output directly
-2. **Extract insights** - Pull out key recommendations, concerns, code snippets
-3. **Apply judgment** - External models can be wrong; evaluate their suggestions
-4. **Disagree when warranted** - If you spot issues, say so and explain why
-5. **Integrate with context** - Connect their response to the user's specific situation
-
-### Example Synthesis
+Before processing a request, determine the appropriate role:
 
 ```
-External model said: [summary of their response]
-
-Key points:
-- [insight 1]
-- [insight 2]
-
-My assessment: [your evaluation, any disagreements, how this applies to the task]
+1. Check explicit triggers ("ask GPT" → Oracle, "have GPT implement" → Worker)
+2. Check for plan review ("review this plan" → Momus)
+3. Check for questions/analysis (question words → Oracle)
+4. Check for action verbs (add, fix, implement → Worker)
+5. Ambiguous → Default to Worker
 ```
 
-## Delegation Prompt Structure (MANDATORY)
+See `rules/triggers.md` for complete trigger definitions.
 
-Use the 7-section format from `rules/delegation-format.md`. Every delegation MUST include: TASK, EXPECTED OUTCOME, CONTEXT, CONSTRAINTS, MUST DO, MUST NOT DO, OUTPUT FORMAT.
+---
 
-## Multi-Role Consultation
+## Worker Flow (Execution)
 
-For complex decisions, you MAY consult GPT with different roles:
+When delegating to Worker:
+
+### Step 1: Notify User
+
+**Always** inform user before delegating:
+```
+Delegating to Worker: [brief task summary]
+```
+
+### Step 2: Execute Delegation
 
 ```typescript
-// Oracle for architecture analysis
-mcp__codex__codex({ prompt: "[oracle role prompt] Analyze architecture tradeoffs..." })
-
-// Momus for plan validation
-mcp__codex__codex({ prompt: "[momus role prompt] Review this implementation plan..." })
+mcp__codex__codex({
+  prompt: "[Worker delegation format - see delegation-format.md]",
+  sandbox: "workspace-write",
+  "approval-policy": "on-failure",
+  cwd: "[current working directory]",
+  "developer-instructions": "[contents of prompts/worker.md]"
+})
 ```
 
-Synthesize recommendations with your own judgment - external models can be wrong.
+### Step 3: Verify Results
 
-## Escalation Pattern
+After Worker completes:
 
-After 2+ consecutive failures on the same issue:
+1. **Read reported files** - Confirm changes match Worker's report
+2. **Run verification** - If project has tests/build/lint, run them
+3. **Check for issues** - Look for obvious problems in changed code
 
-1. **Document what you've tried** - List approaches and why they failed
-2. **Suggest escalation** - "I've tried X and Y without success. Should I escalate to GPT for a fresh perspective?"
-3. **Wait for user approval** - Don't escalate automatically
-4. **Provide full context** - When escalating, include failure history
+### Step 4: Report to User
+
+**On success** (expandable format):
+```
+**Worker completed**: [1-2 sentence summary]
+
+<details>
+<summary>Details</summary>
+
+**Files modified**:
+- [file list from Worker]
+
+**Verification**:
+- [what was checked, results]
+</details>
+```
+
+**On failure** → Proceed to retry flow
+
+### Step 5: Retry Flow (On Verification Failure)
+
+```
+Attempt 1: Worker completes → Verification fails
+    ↓
+Attempt 2: codex-reply with error context → Verification fails
+    ↓
+Attempt 3: codex-reply with error context → Verification fails
+    ↓
+Escalate: Report to user with full context
+```
+
+Use `mcp__codex__codex-reply` with the conversation ID:
+
+```typescript
+mcp__codex__codex-reply({
+  conversationId: "[from previous response]",
+  prompt: "Verification failed: [specific error]. Please fix and verify again."
+})
+```
+
+After 3 failed attempts, escalate to user:
+```
+Worker attempted this task 3 times but verification continues to fail.
+
+**Last error**: [error details]
+**Files modified**: [list]
+**Attempts made**: [summary of each attempt]
+
+How would you like to proceed?
+```
+
+---
+
+## Oracle Flow (Advisory)
+
+When delegating to Oracle:
+
+### Step 1: Notify User
+```
+Consulting Oracle: [topic]
+```
+
+### Step 2: Execute Delegation
+
+```typescript
+mcp__codex__codex({
+  prompt: "[Oracle delegation format - see delegation-format.md]",
+  "developer-instructions": "[contents of prompts/oracle.md]"
+})
+```
+
+### Step 3: Synthesize Response
+
+**ALWAYS synthesize** - Never show raw output directly:
+
+1. Extract key recommendations and insights
+2. Apply your judgment - external models can be wrong
+3. Disagree when warranted - explain why
+4. Connect to user's specific situation
+
+```
+**Oracle's analysis**:
+[summary of key points]
+
+**Key recommendations**:
+- [recommendation 1]
+- [recommendation 2]
+
+**My assessment**: [your evaluation, any disagreements, how this applies]
+```
+
+---
+
+## Momus Flow (Plan Validation)
+
+When delegating to Momus:
+
+### Step 1: Notify User
+```
+Validating plan with Momus...
+```
+
+### Step 2: Execute Delegation
+
+```typescript
+mcp__codex__codex({
+  prompt: "[Momus delegation format - see delegation-format.md]",
+  "developer-instructions": "[contents of prompts/momus.md]"
+})
+```
+
+### Step 3: Report Verdict
+
+```
+**Plan review**: [OKAY / REJECT]
+
+[Momus's justification]
+
+[If REJECT: Top issues to address]
+```
+
+---
 
 ## Cost Awareness
 
-External model calls cost money. Use them strategically:
+External model calls cost money. Use strategically:
 
 - **Don't spam** - One well-structured delegation beats five vague ones
-- **Reserve for high-value tasks** - Architecture, security, complex debugging, plan validation
-- **Avoid redundant calls** - If you already have the answer, don't delegate
-- **Use reply tools** - Continue conversations with `codex-reply` instead of starting fresh
+- **Worker for action** - Don't ask Oracle when you need implementation
+- **Use codex-reply** - Continue conversations instead of starting fresh
+- **Avoid redundant calls** - If you have the answer, don't delegate
+
+---
 
 ## Anti-Patterns
 
 | Don't Do This | Do This Instead |
 |---------------|-----------------|
-| Delegate trivial questions | Answer directly |
-| Show raw external output | Synthesize and interpret |
-| Delegate without context | Include all 7 sections |
-| Ignore external model errors | Investigate and retry or escalate |
-| Spam multiple calls | One structured call |
-| Auto-escalate without asking | Suggest escalation, wait for approval |
+| Delegate without notifying user | Always show "Delegating to [Role]: [task]" |
+| Skip verification after Worker | Always verify changed files |
+| Show raw Worker output | Summarize with expandable details |
+| Retry indefinitely | Max 3 attempts, then escalate |
+| Mix roles in one delegation | One role per delegation |
+| Delegate trivial tasks | Handle directly |

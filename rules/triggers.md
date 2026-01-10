@@ -1,34 +1,80 @@
 # Delegation Triggers
 
-This file defines when to delegate to Codex (GPT) as the oracle.
+This file defines when and how to delegate to Codex (GPT) across three roles: Worker, Oracle, and Momus.
+
+## Role Auto-Detection
+
+Automatically route to the appropriate role based on task type:
+
+| Signal | Role | Examples |
+|--------|------|----------|
+| Action verb + target | **Worker** | "add tests", "fix the bug", "update README", "implement feature", "create config" |
+| Question word or analysis | **Oracle** | "what are the tradeoffs", "how should I", "is this secure", "review this architecture" |
+| "plan" + review/validate | **Momus** | "review this plan", "validate the approach", "check this plan" |
+
+**Default on ambiguity**: Worker (bias toward action)
+
+Examples:
+- "Improve the README" → Worker (action implied)
+- "How should I improve the README?" → Oracle (question)
+- "Review my plan to improve the README" → Momus (plan review)
+
+---
 
 ## Explicit Triggers (Highest Priority)
 
-These phrases trigger immediate delegation. User intent is clear.
+User intent is explicit. Always honor direct requests.
 
-| Phrase Pattern | Action |
-|----------------|--------|
-| "ask GPT", "consult GPT", "GPT's opinion" | `mcp__codex__codex` |
-| "get a second opinion" | `mcp__codex__codex` |
-| "oracle" | `mcp__codex__codex` with oracle role |
-| "what does GPT think" | `mcp__codex__codex` |
-| "review this with GPT" | `mcp__codex__codex` |
+| Phrase Pattern | Role | Action |
+|----------------|------|--------|
+| "ask GPT", "consult GPT", "GPT's opinion" | Oracle | Advisory mode |
+| "have GPT implement", "GPT should fix" | Worker | Execution mode |
+| "review this plan with GPT" | Momus | Plan validation |
+| "oracle" | Oracle | Explicit oracle role |
+| "get a second opinion" | Oracle | Advisory mode |
 
-## Semantic Triggers (Intent Matching)
+---
 
-When user intent matches these patterns, consider delegation.
+## Worker Triggers (→ Execution)
 
-### Architecture & Design (→ Oracle)
+Worker is invoked for implementation tasks with clear action verbs.
+
+### Action Patterns
+
+| Pattern | Examples |
+|---------|----------|
+| "add [thing]" | "Add a section to README", "Add tests for X" |
+| "fix [thing]" | "Fix the bug in auth", "Fix the failing test" |
+| "update [thing]" | "Update the config", "Update dependencies" |
+| "implement [thing]" | "Implement feature X", "Implement the API endpoint" |
+| "create [thing]" | "Create a new component", "Create the migration" |
+| "delete/remove [thing]" | "Delete the unused code", "Remove deprecated API" |
+| "refactor [thing]" | "Refactor the auth module" |
+
+### Worker Sandbox
+
+Worker executes with:
+- `sandbox: workspace-write` - Can modify files in workspace
+- `approval-policy: on-failure` - Only prompts on errors
+- `cwd: [current directory]` - Operates in current working directory
+
+---
+
+## Oracle Triggers (→ Advisory)
+
+Oracle is invoked for strategic advice, analysis, and complex decisions.
+
+### Architecture & Design
 
 | Intent Pattern | Example |
 |----------------|---------|
 | "review this architecture" | "Review this database schema" |
 | "is this design sound" | "Is this API design sound?" |
 | "what are the tradeoffs" | "Tradeoffs of this caching approach" |
-| "should I use [pattern A] or [pattern B]" | "Should I use microservices or monolith?" |
+| "should I use [A] or [B]" | "Should I use microservices or monolith?" |
 | "how should I structure" | "How should I structure this service?" |
 
-### Security (→ Oracle)
+### Security
 
 | Intent Pattern | Example |
 |----------------|---------|
@@ -37,7 +83,7 @@ When user intent matches these patterns, consider delegation.
 | "vulnerability in" | "Any vulnerabilities in this code?" |
 | "threat model" | "Threat model for this API" |
 
-### Code Review (→ Oracle)
+### Code Review (Advisory)
 
 | Intent Pattern | Example |
 |----------------|---------|
@@ -45,7 +91,7 @@ When user intent matches these patterns, consider delegation.
 | "review for edge cases" | "Review for edge cases in this logic" |
 | "what am I missing" | "What am I missing in this implementation?" |
 
-### Debugging Escalation (→ Oracle)
+### Debugging Escalation
 
 | Condition | Action |
 |-----------|--------|
@@ -53,23 +99,42 @@ When user intent matches these patterns, consider delegation.
 | "why is this failing" (after attempts) | Oracle with full failure context |
 | "I've tried everything" | Oracle with documented attempts |
 
+---
+
+## Momus Triggers (→ Plan Validation)
+
+Momus is invoked to validate work plans before execution.
+
+| Intent Pattern | Example |
+|----------------|---------|
+| "review this plan" | "Review this migration plan" |
+| "validate the approach" | "Validate my approach before I start" |
+| "check this plan for gaps" | "Check this implementation plan" |
+| "is this plan complete" | "Is this refactoring plan complete?" |
+
+---
+
 ## Trigger Priority
 
-1. **Explicit user request** - Always honor direct requests
-2. **Failure escalation** - After documented failures
-3. **Semantic intent match** - When pattern clearly matches oracle scope
-4. **Don't delegate** - Default: answer directly
+1. **Explicit user request** - Always honor direct role requests ("ask GPT", "have GPT implement")
+2. **Plan validation** - "plan" + review/validate → Momus
+3. **Question/analysis** - Question words, "review", "analyze" → Oracle
+4. **Action verbs** - add, fix, implement, update, create → Worker
+5. **Ambiguous** - Default to Worker (bias toward action)
+
+---
 
 ## When NOT to Delegate
 
 | Situation | Reason |
 |-----------|--------|
-| Simple syntax questions | You know the answer |
-| Direct file operations | No external insight needed |
-| Trivial bug fixes | Obvious solution |
-| Research/documentation | Not oracle's strength |
-| Frontend/UI tasks | Not oracle's strength |
-| User just wants info | Answer directly |
+| Simple syntax questions | Claude knows the answer |
+| Direct file operations (no reasoning needed) | No external insight needed |
+| Trivial bug fixes (obvious solution) | Don't waste delegation |
+| User just wants info/explanation | Answer directly |
+| First attempt at any fix | Try yourself first (except Worker tasks) |
+
+---
 
 ## Context-Dependent Triggers
 
@@ -85,14 +150,18 @@ THEN offer oracle consultation
 IF architectural decision
 AND long-term impact
 THEN recommend oracle review
+
+IF task involves code changes
+AND action verb present
+THEN route to Worker
 ```
 
-## Role: Oracle
+---
 
-The oracle role auto-injects a system prompt emphasizing:
-- Pragmatic minimalism
-- Existing codebase patterns
-- Developer experience
-- Clear action plans with effort estimates
+## Role Reference
 
-See `prompts/oracle.md` for full prompt.
+| Role | Prompt File | Purpose |
+|------|-------------|---------|
+| Worker | `prompts/worker.md` | Execute implementation tasks |
+| Oracle | `prompts/oracle.md` | Strategic advice, architecture, security |
+| Momus | `prompts/momus.md` | Plan validation and critique |

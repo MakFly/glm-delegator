@@ -7,7 +7,7 @@ timeout: 60000
 
 # Setup
 
-Configure Codex (GPT) as a strategic advisor via native MCP.
+Configure Codex (GPT) as an AI collaborator via native MCP. Supports three roles: Worker (execution), Oracle (advisory), and Momus (plan validation).
 
 ## Step 1: Check Codex CLI
 
@@ -51,7 +51,7 @@ Merge into `~/.claude/settings.json`:
 }
 ```
 
-Note: Uses `gpt-5.2-codex` explicitly for the latest model.
+Note: Use `gpt-5.2-codex` explicitly for the latest model.
 
 **CRITICAL**:
 - Merge with existing settings, don't overwrite
@@ -107,9 +107,24 @@ Next steps:
 1. Restart Claude Code to load MCP server
 2. Authenticate: Run `codex login` in terminal (if not already done)
 
-Test with: "Ask GPT to review this architecture"
+Three roles available:
 
-Note: Codex is configured as a strategic advisor (oracle role).
-Use for: architecture decisions, complex debugging, code review, security analysis
-Avoid for: simple operations, trivial decisions, research, frontend generation
+┌─────────┬────────────────────────────────────────────────────┐
+│ Worker  │ "Add a section to the README"                      │
+│         │ "Fix the failing test"                             │
+│         │ "Implement feature X"                              │
+│         │ → Executes tasks directly, modifies files          │
+├─────────┼────────────────────────────────────────────────────┤
+│ Oracle  │ "What are the tradeoffs of X vs Y?"                │
+│         │ "Review this architecture"                         │
+│         │ "Is this secure?"                                  │
+│         │ → Strategic advice, analysis, recommendations      │
+├─────────┼────────────────────────────────────────────────────┤
+│ Momus   │ "Review this plan"                                 │
+│         │ "Validate my approach"                             │
+│         │ → Plan critique before implementation              │
+└─────────┴────────────────────────────────────────────────────┘
+
+Role is auto-detected based on your request.
+Explicit override: "Ask GPT..." (Oracle) or "Have GPT implement..." (Worker)
 ```

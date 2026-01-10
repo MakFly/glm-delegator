@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A Claude Code plugin that provides GPT (via Codex CLI) as a native MCP tool for strategic consultation. Use sparingly for complex architecture, debugging escalation, and code review.
+A Claude Code plugin that provides GPT (via Codex CLI) as a native MCP tool for AI collaboration. Three roles: Worker (execution), Oracle (advisory), and Momus (plan validation).
 
 ## Development Commands
 
@@ -12,66 +12,78 @@ A Claude Code plugin that provides GPT (via Codex CLI) as a native MCP tool for 
 # Test plugin installation
 /claude-delegator:setup
 
-# Check status
-/claude-delegator:configure status
+# Uninstall
+/claude-delegator:configure
 ```
 
 No build step, no dependencies. Uses Codex CLI's native MCP server.
 
 ## Architecture
 
-### Data Flow
+### Sisyphus Model
+
+Claude acts as orchestrator (Sisyphus) - delegates work to specialists, verifies results.
 
 ```
-User Request → Claude Code → [Match oracle trigger?]
+User Request → Claude Code → [Auto-detect role]
                                     ↓
-                    Yes → mcp__codex__codex (GPT)
-                                    ↓
-                    [Role prompt via developer-instructions]
-                                    ↓
-                    [Response] → Claude synthesizes
+              ┌─────────────────────┼─────────────────────┐
+              ↓                     ↓                     ↓
+           Worker               Oracle                 Momus
+        (execution)           (advisory)          (plan review)
+              ↓                     ↓                     ↓
+     [sandbox: write]      [sandbox: read]       [sandbox: read]
+              ↓                     ↓                     ↓
+        [Verify]              [Synthesize]          [Report]
+              ↓                     ↓                     ↓
+         Report to user ←──────────┴──────────────────────┘
 ```
+
+### Three-Role Model
+
+| Role | Purpose | Sandbox | Trigger |
+|------|---------|---------|---------|
+| **Worker** | Execute tasks, modify files | `workspace-write` | Action verbs: add, fix, implement |
+| **Oracle** | Strategic advice, analysis | `read-only` | Questions, tradeoffs, architecture |
+| **Momus** | Plan validation, critique | `read-only` | "Review this plan" |
 
 ### Component Relationships
 
-| Component | Location | Installed To | Purpose |
-|-----------|----------|--------------|---------|
-| Rules | `rules/*.md` | `~/.claude/rules/delegator/` | Teaches when/how to delegate |
-| Prompts | `prompts/*.md` | Referenced in delegation | Shapes GPT behavior |
-| Commands | `commands/*.md` | Plugin namespace | `/setup`, `/configure` |
-| Config | `config/providers.json` | Read at runtime | Provider configuration |
-
-### Roles
-
-| Role | Purpose | When to Use |
-|------|---------|-------------|
-| `oracle` | Strategic advisor | Architecture, debugging escalation, code review, security |
-| `momus` | Plan reviewer | Validate work plans before execution |
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Rules | `rules/*.md` | Teaches when/how to delegate |
+| Prompts | `prompts/*.md` | Shapes GPT behavior per role |
+| Commands | `commands/*.md` | `/setup`, `/configure` |
+| Config | `config/providers.json` | Provider configuration |
 
 > Role prompts adapted from [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode)
 
 ## Key Design Decisions
 
 1. **Native MCP only** - Codex has `codex mcp-server`, no wrapper needed
-2. **Focused scope** - Oracle for strategic decisions, not everything
-3. **Response synthesis** - Claude interprets GPT output, never raw passthrough
-4. **Pragmatic minimalism** - Favor simplest solution that works
+2. **Three distinct roles** - Worker executes, Oracle advises, Momus critiques
+3. **Auto-detection** - Role determined by task type (action verbs vs questions)
+4. **Verify then report** - Claude verifies Worker output before reporting
+5. **Retry with codex-reply** - Up to 3 attempts before escalating failures
 
-## When to Invoke
+## When to Use Each Role
 
-**DO use for**:
-- Architecture decisions with long-term impact
+### Worker (Execution)
+- "Add a section to the README"
+- "Fix the failing test in auth.ts"
+- "Implement the user export feature"
+- "Update the config for production"
+
+### Oracle (Advisory)
+- "What are the tradeoffs of Redis vs in-memory?"
+- "Review this architecture for scalability"
+- "Is this authentication flow secure?"
 - After 2+ failed fix attempts
-- Security/performance concerns
-- Multi-system tradeoffs
-- Code review for significant changes
 
-**DON'T use for**:
-- Simple file operations
-- First attempt at any fix
-- Trivial decisions
-- Research or documentation
-- Frontend/UI generation
+### Momus (Plan Validation)
+- "Review this migration plan"
+- "Validate my approach before I start"
+- "Is this implementation plan complete?"
 
 ## Plugin Structure
 
@@ -86,9 +98,9 @@ claude-delegator/
 │   ├── model-selection.md
 │   └── delegation-format.md
 ├── prompts/
+│   ├── worker.md      # Executor prompt
 │   ├── oracle.md      # Strategic advisor prompt
-│   ├── momus.md       # Plan reviewer prompt
-│   └── README.md
+│   └── momus.md       # Plan reviewer prompt
 └── config/
     └── providers.json
 ```

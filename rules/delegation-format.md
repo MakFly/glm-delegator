@@ -128,10 +128,77 @@ OUTPUT FORMAT:
 
 ---
 
+## Worker (GPT) Template
+
+For implementation tasks - executing code changes directly.
+
+```markdown
+TASK: [Action verb] [specific thing] in [location].
+
+EXPECTED OUTCOME: [Thing] is [done/added/fixed/updated] and verified working.
+
+WORKING DIRECTORY: [absolute path to cwd]
+
+FILES TO MODIFY: [specific files if known, otherwise "discover as needed"]
+
+CONTEXT:
+- Purpose: [Why this change is needed]
+- Existing patterns: [Relevant conventions in this codebase]
+- Related files: [Files to reference for patterns/context]
+
+REQUIREMENTS:
+- [Specific requirement 1]
+- [Specific requirement 2]
+
+VERIFICATION:
+- [How to verify: run tests, build, lint, etc.]
+- [Expected outcome of verification]
+
+CONSTRAINTS:
+- Only modify files related to this task
+- Follow existing code patterns in the project
+- Report all files you modify
+- Do not refactor unrelated code
+```
+
+### Worker Template Example
+
+```markdown
+TASK: Add installation section to README.md.
+
+EXPECTED OUTCOME: README has clear installation instructions with npm and yarn commands.
+
+WORKING DIRECTORY: /Users/dev/my-project
+
+FILES TO MODIFY: README.md
+
+CONTEXT:
+- Purpose: Users need to know how to install the package
+- Existing patterns: README uses ## headers, has Overview section already
+- Related files: package.json (for package name)
+
+REQUIREMENTS:
+- Include npm install command
+- Include yarn add command
+- Place after Overview section
+
+VERIFICATION:
+- Confirm markdown renders correctly
+- Verify package name matches package.json
+
+CONSTRAINTS:
+- Only modify README.md
+- Match existing markdown style
+- Report the file modification
+```
+
+---
+
 ## Quick Reference
 
 | Role | Model | Template Focus |
 |------|-------|----------------|
+| Worker | GPT | Execute task, modify files, verify results |
 | Oracle | GPT | Deep analysis, tradeoffs, recommendations |
 | Momus | GPT | Plan review, critique, validation |
 

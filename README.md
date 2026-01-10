@@ -164,6 +164,18 @@ codex login
 
 ---
 
+## Testing
+
+To test the plugin locally during development, run Claude with a local plugin directory (see `commands/setup.md` for setup context):
+
+```bash
+claude --plugin-dir /path/to/claude-delegator
+```
+
+This loads the plugin directly from your working copy so you can iterate without reinstalling.
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |
