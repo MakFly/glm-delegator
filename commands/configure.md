@@ -90,17 +90,29 @@ If not installed, offer to install:
 npm install -g @google/gemini-cli
 ```
 
-Ensure Bun is installed:
+Detect package manager:
 ```bash
-which bun && bun --version
+which bun 2>/dev/null && echo "PKG_MANAGER=bun" || \
+which npm 2>/dev/null && echo "PKG_MANAGER=npm" || \
+which yarn 2>/dev/null && echo "PKG_MANAGER=yarn" || \
+echo "PKG_MANAGER=NONE"
 ```
 
-Install MCP server dependencies:
+Install MCP server dependencies (use detected package manager):
 ```bash
+# If bun
 cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && bun install
+
+# If npm
+cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && npm install
+
+# If yarn
+cd ${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp && yarn install
 ```
 
 Add to `~/.claude/settings.json`:
+
+**If bun:**
 ```json
 {
   "mcpServers": {
@@ -108,6 +120,19 @@ Add to `~/.claude/settings.json`:
       "type": "stdio",
       "command": "bun",
       "args": ["run", "${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp/src/index.ts"]
+    }
+  }
+}
+```
+
+**If npm or yarn:**
+```json
+{
+  "mcpServers": {
+    "gemini": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "${CLAUDE_PLUGIN_ROOT}/servers/gemini-mcp/src/index.ts"]
     }
   }
 }
