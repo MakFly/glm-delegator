@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Test coverage
+coverage/
+
+# Node (handled in subdirs but good to have at root)
+node_modules/
