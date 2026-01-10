@@ -86,6 +86,7 @@ claude-delegator/
 │   ├── model-selection.md    # Oracle decision guidelines
 │   └── delegation-format.md  # Prompt structure
 ├── prompts/
+│   ├── worker.md             # Task executor
 │   ├── oracle.md             # Strategic advisor
 │   └── momus.md              # Plan reviewer
 ├── commands/
@@ -110,6 +111,7 @@ claude-delegator/
 
 | Role | Purpose |
 |------|---------|
+| `worker` | Task executor—implements code changes directly |
 | `oracle` | Strategic advisor—architecture, security, complex debugging |
 | `momus` | Plan reviewer—validates work plans before execution |
 

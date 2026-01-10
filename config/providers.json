@@ -11,7 +11,7 @@
         "command": "codex",
         "args": ["-m", "gpt-5.2-codex", "mcp-server"]
       },
-      "roles": ["oracle", "momus"],
+      "roles": ["worker", "oracle", "momus"],
       "strengths": ["architecture", "debugging-escalation", "code-review", "security", "tradeoff-analysis"],
       "avoid": ["simple-operations", "trivial-decisions", "research", "frontend-generation"]
     }
