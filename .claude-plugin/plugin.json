@@ -1,7 +1,7 @@
 {
   "name": "claude-delegator",
-  "description": "Multi-model orchestration via MCP. External AI models (GPT, Gemini) as native tool providers.",
-  "version": "1.0.0",
+  "description": "GPT as a strategic advisor via Codex MCP. Oracle for architecture, debugging, and code review. Momus for plan validation.",
+  "version": "0.9.0",
   "author": {
     "name": "Jarrod Watts",
     "url": "https://github.com/jarrodwatts"
@@ -9,5 +9,5 @@
   "homepage": "https://github.com/jarrodwatts/claude-delegator",
   "repository": "https://github.com/jarrodwatts/claude-delegator",
   "license": "MIT",
-  "keywords": ["delegation", "multi-model", "mcp", "gemini", "codex", "gpt", "openai", "google", "orchestration"]
+  "keywords": ["delegation", "mcp", "codex", "gpt", "openai", "oracle", "orchestration"]
 }
