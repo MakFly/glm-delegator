@@ -1,6 +1,6 @@
 # Delegation Triggers
 
-This file defines when to delegate to GPT experts via Codex.
+This file defines when to delegate to GLM-4.7 experts via the GLM MCP server.
 
 ## IMPORTANT: Check These Triggers on EVERY Message
 
@@ -8,24 +8,24 @@ You MUST scan incoming messages for delegation triggers. This is NOT optional.
 
 **Behavior:**
 1. **PROACTIVE**: On every user message, check if semantic triggers match → delegate automatically
-2. **REACTIVE**: If user explicitly mentions GPT/Codex → delegate immediately
+2. **REACTIVE**: If user explicitly mentions GLM → delegate immediately
 
 When a trigger matches:
 1. Identify the appropriate expert
-2. Read their prompt file from `${CLAUDE_PLUGIN_ROOT}/prompts/[expert].md`
-3. Follow the delegation flow in `rules/orchestration.md`
+2. Use the MCP tool `mcp__glm-delegator__glm_{expert}`
+3. Pass the task, mode (advisory/implementation), context, and files
 
 ---
 
 ## Available Experts
 
-| Expert | Specialty | Use For |
-|--------|-----------|---------|
-| **Architect** | System design, tradeoffs | Architecture decisions, complex debugging |
-| **Plan Reviewer** | Plan validation | Reviewing work plans before execution |
-| **Scope Analyst** | Pre-planning analysis | Catching ambiguities before work starts |
-| **Code Reviewer** | Code quality, bugs | Reviewing code changes, finding issues |
-| **Security Analyst** | Vulnerabilities, threats | Security audits, hardening |
+| Expert | MCP Tool | Specialty | Use For |
+|--------|----------|-----------|---------|
+| **Architect** | `glm_architect` | System design, tradeoffs | Architecture decisions, complex debugging |
+| **Plan Reviewer** | `glm_plan_reviewer` | Plan validation | Reviewing work plans before execution |
+| **Scope Analyst** | `glm_scope_analyst` | Pre-planning analysis | Catching ambiguities before work starts |
+| **Code Reviewer** | `glm_code_reviewer` | Code quality, bugs | Reviewing code changes, finding issues |
+| **Security Analyst** | `glm_security_analyst` | Vulnerabilities, threats | Security audits, hardening |
 
 ## Explicit Triggers (Highest Priority)
 
@@ -33,7 +33,7 @@ User explicitly requests delegation:
 
 | Phrase Pattern | Expert |
 |----------------|--------|
-| "ask GPT", "consult GPT" | Route based on context |
+| "ask GLM", "consult GLM" | Route based on context |
 | "review this architecture" | Architect |
 | "review this plan" | Plan Reviewer |
 | "analyze the scope" | Scope Analyst |
@@ -111,37 +111,37 @@ User explicitly requests delegation:
 
 Any expert can operate in two modes:
 
-| Mode | Sandbox | When to Use |
-|------|---------|-------------|
-| **Advisory** | `read-only` | Analysis, recommendations, review verdicts |
-| **Implementation** | `workspace-write` | Actually making changes, fixing issues |
+| Mode | When to Use |
+|------|-------------|
+| **Advisory** | Analysis, recommendations, review verdicts |
+| **Implementation** | Actually making changes, fixing issues |
 
-Set the sandbox based on what the task requires, not the expert type.
+Set the mode based on what the task requires.
 
 **Examples:**
 
-```typescript
-// Architect analyzing (advisory)
-mcp__codex__codex({
-  prompt: "Analyze tradeoffs of Redis vs in-memory caching",
-  sandbox: "read-only"
+```
+# Architect analyzing (advisory)
+mcp__glm-delegator__glm_architect({
+  task: "Analyze tradeoffs of Redis vs in-memory caching",
+  mode: "advisory"
 })
 
-// Architect implementing (implementation)
-mcp__codex__codex({
-  prompt: "Refactor the caching layer to use Redis",
-  sandbox: "workspace-write"
+# Architect implementing (implementation)
+mcp__glm-delegator__glm_architect({
+  task: "Refactor the caching layer to use Redis",
+  mode: "implementation"
 })
 
-// Security Analyst reviewing (advisory)
-mcp__codex__codex({
-  prompt: "Review this auth flow for vulnerabilities",
-  sandbox: "read-only"
+# Security Analyst reviewing (advisory)
+mcp__glm-delegator__glm_security_analyst({
+  task: "Review this auth flow for vulnerabilities",
+  mode: "advisory"
 })
 
-// Security Analyst hardening (implementation)
-mcp__codex__codex({
-  prompt: "Fix the SQL injection vulnerability in user.ts",
-  sandbox: "workspace-write"
+# Security Analyst hardening (implementation)
+mcp__glm-delegator__glm_security_analyst({
+  task: "Fix the SQL injection vulnerability in user.ts",
+  mode: "implementation"
 })
 ```

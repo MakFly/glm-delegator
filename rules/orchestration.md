@@ -1,24 +1,24 @@
 # Model Orchestration
 
-You have access to GPT experts via MCP tools. Use them strategically based on these guidelines.
+You have access to GLM-4.7 experts via MCP tools. Use them strategically based on these guidelines.
 
 ## Available Tools
 
 | Tool | Provider | Use For |
 |------|----------|---------|
-| `mcp__codex__codex` | GPT | Delegate to an expert (stateless) |
+| `mcp__glm-delegator__glm_{expert}` | GLM-4.7 (Z.AI) | Delegate to an expert |
 
-> **Note:** `codex-reply` exists but requires a session ID not currently exposed to Claude Code. Each delegation is independent—include full context in every call.
+> **Note:** Each delegation is independent—include full context in every call.
 
 ## Available Experts
 
-| Expert | Specialty | Prompt File |
-|--------|-----------|-------------|
-| **Architect** | System design, tradeoffs, complex debugging | `${CLAUDE_PLUGIN_ROOT}/prompts/architect.md` |
-| **Plan Reviewer** | Plan validation before execution | `${CLAUDE_PLUGIN_ROOT}/prompts/plan-reviewer.md` |
-| **Scope Analyst** | Pre-planning, catching ambiguities | `${CLAUDE_PLUGIN_ROOT}/prompts/scope-analyst.md` |
-| **Code Reviewer** | Code quality, bugs, security issues | `${CLAUDE_PLUGIN_ROOT}/prompts/code-reviewer.md` |
-| **Security Analyst** | Vulnerabilities, threat modeling | `${CLAUDE_PLUGIN_ROOT}/prompts/security-analyst.md` |
+| Expert | MCP Tool | Specialty |
+|--------|----------|-----------|
+| **Architect** | `glm_architect` | System design, tradeoffs, complex debugging |
+| **Plan Reviewer** | `glm_plan_reviewer` | Plan validation before execution |
+| **Scope Analyst** | `glm_scope_analyst` | Pre-planning, catching ambiguities |
+| **Code Reviewer** | `glm_code_reviewer` | Code quality, bugs, security issues (EN/FR/CN) |
+| **Security Analyst** | `glm_security_analyst` | Vulnerabilities, threat modeling |
 
 ---
 
@@ -30,8 +30,6 @@ You have access to GPT experts via MCP tools. Use them strategically based on th
 - Include ALL relevant context in every delegation prompt
 - For retries, include what was attempted and what failed
 - Don't assume the expert remembers previous interactions
-
-**Why:** Codex MCP returns session IDs in event notifications, but Claude Code only surfaces the final text response. Until this changes, treat each call as fresh.
 
 ---
 
@@ -54,14 +52,14 @@ Before handling any request, check if an expert would help:
 
 ## REACTIVE Delegation (Explicit User Request)
 
-When user explicitly requests GPT/Codex:
+When user explicitly requests GLM:
 
 | User Says | Action |
 |-----------|--------|
-| "ask GPT", "consult GPT", "ask codex" | Identify task type → route to appropriate expert |
-| "ask GPT to review the architecture" | Delegate to Architect |
-| "have GPT review this code" | Delegate to Code Reviewer |
-| "GPT security review" | Delegate to Security Analyst |
+| "ask GLM", "consult GLM" | Identify task type → route to appropriate expert |
+| "ask GLM to review the architecture" | Delegate to Architect |
+| "have GLM review this code" | Delegate to Code Reviewer |
+| "GLM security review" | Delegate to Security Analyst |
 
 **Always honor explicit requests.**
 
@@ -74,46 +72,29 @@ When delegation is triggered:
 ### Step 1: Identify Expert
 Match the task to the appropriate expert based on triggers.
 
-### Step 2: Read Expert Prompt
-**CRITICAL**: Read the expert's prompt file to get their system instructions:
+### Step 2: Determine Mode
+| Task Type | Mode |
+|-----------|------|
+| Analysis, review, recommendations | Advisory |
+| Make changes, fix issues, implement | Implementation |
 
-```
-Read ${CLAUDE_PLUGIN_ROOT}/prompts/[expert].md
-```
-
-For example, for Architect: `Read ${CLAUDE_PLUGIN_ROOT}/prompts/architect.md`
-
-### Step 3: Determine Mode
-| Task Type | Mode | Sandbox |
-|-----------|------|---------|
-| Analysis, review, recommendations | Advisory | `read-only` |
-| Make changes, fix issues, implement | Implementation | `workspace-write` |
-
-### Step 4: Notify User
+### Step 3: Notify User
 Always inform the user before delegating:
 ```
 Delegating to [Expert Name]: [brief task summary]
 ```
 
-### Step 5: Build Delegation Prompt
-Use the 7-section format from `rules/delegation-format.md`.
-
-**IMPORTANT:** Since each call is stateless, include FULL context:
-- What the user asked for
-- Relevant code/files
-- Any previous attempts and their results (for retries)
-
-### Step 6: Call the Expert
+### Step 4: Call the Expert
 ```typescript
-mcp__codex__codex({
-  prompt: "[your 7-section delegation prompt with FULL context]",
-  "developer-instructions": "[contents of the expert's prompt file]",
-  sandbox: "[read-only or workspace-write based on mode]",
-  cwd: "[current working directory]"
+mcp__glm-delegator__glm_{expert}({
+  task: "[clear description of what you need]",
+  mode: "[advisory or implementation]",
+  context: "[relevant context about the codebase]",
+  files: ["[list of relevant files]"]
 })
 ```
 
-### Step 7: Handle Response
+### Step 5: Handle Response
 1. **Synthesize** - Never show raw output directly
 2. **Extract insights** - Key recommendations, issues, changes
 3. **Apply judgment** - Experts can be wrong; evaluate critically
@@ -135,26 +116,6 @@ Attempt 3 (new call with: full history of attempts) → Verify → [Fail]
 Escalate to user
 ```
 
-### Retry Prompt Template
-
-```markdown
-TASK: [Original task]
-
-PREVIOUS ATTEMPT:
-- What was done: [summary of changes made]
-- Error encountered: [exact error message]
-- Files modified: [list]
-
-CONTEXT:
-- [Full original context]
-
-REQUIREMENTS:
-- Fix the error from the previous attempt
-- [Original requirements]
-```
-
-**Key:** Each retry is a fresh call. The expert doesn't know what happened before unless you tell them.
-
 ---
 
 ## Example: Architecture Question
@@ -163,25 +124,20 @@ User: "What are the tradeoffs of Redis vs in-memory caching?"
 
 **Step 1**: Signal matches "Architecture decision" → Architect
 
-**Step 2**: Read `${CLAUDE_PLUGIN_ROOT}/prompts/architect.md`
+**Step 2**: Advisory mode (question, not implementation)
 
-**Step 3**: Advisory mode (question, not implementation) → `read-only`
+**Step 3**: "Delegating to Architect: Analyze caching tradeoffs"
 
-**Step 4**: "Delegating to Architect: Analyze caching tradeoffs"
-
-**Step 5-6**:
+**Step 4**:
 ```typescript
-mcp__codex__codex({
-  prompt: `TASK: Analyze tradeoffs between Redis and in-memory caching for [context].
-EXPECTED OUTCOME: Clear recommendation with rationale.
-CONTEXT: [user's situation, full details]
-...`,
-  "developer-instructions": "[contents of architect.md]",
-  sandbox: "read-only"
+mcp__glm-delegator__glm_architect({
+  task: "Analyze tradeoffs between Redis and in-memory caching for this use case",
+  mode: "advisory",
+  context: "[user's situation, full details]"
 })
 ```
 
-**Step 7**: Synthesize response, add your assessment.
+**Step 5**: Synthesize response, add your assessment.
 
 ---
 
@@ -191,26 +147,18 @@ First attempt failed with "TypeError: Cannot read property 'x' of undefined"
 
 **Retry call:**
 ```typescript
-mcp__codex__codex({
-  prompt: `TASK: Add input validation to the user registration endpoint.
+mcp__glm-delegator__glm_code_reviewer({
+  task: `Fix the input validation error in user registration.
 
 PREVIOUS ATTEMPT:
 - Added validation middleware to routes/auth.ts
 - Error: TypeError: Cannot read property 'x' of undefined at line 45
 - The middleware was added but req.body was undefined
 
-CONTEXT:
-- Express 4.x application
-- Body parser middleware exists in app.ts
-- [relevant code snippets]
-
-REQUIREMENTS:
-- Fix the undefined req.body issue
-- Ensure validation runs after body parser
-- Report all files modified`,
-  "developer-instructions": "[contents of code-reviewer.md or architect.md]",
-  sandbox: "workspace-write",
-  cwd: "/path/to/project"
+Please fix this issue.`,
+  mode: "implementation",
+  context: "Express 4.x application with body parser in app.ts",
+  files: ["routes/auth.ts", "app.ts"]
 })
 ```
 
@@ -230,7 +178,6 @@ REQUIREMENTS:
 |---------------|-----------------|
 | Delegate trivial questions | Answer directly |
 | Show raw expert output | Synthesize and interpret |
-| Delegate without reading prompt file | ALWAYS read and inject expert prompt |
 | Skip user notification | ALWAYS notify before delegating |
 | Retry without including error context | Include FULL history of what was tried |
 | Assume expert remembers previous calls | Include all context in every call |

@@ -1,113 +1,156 @@
 ---
 name: setup
-description: Configure claude-delegator with Codex MCP server
+description: Configure glm-delegator with Z.AI GLM-4.7 MCP server
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
 timeout: 60000
 ---
 
 # Setup
 
-Configure Codex (GPT) as specialized expert subagents via native MCP. Five domain experts that can advise OR implement.
+Configure GLM-4.7 as specialized expert subagents via MCP. Five domain experts that can advise OR implement.
 
-## Step 1: Check Codex CLI
+## Step 1: Check Python and Dependencies
 
 ```bash
-which codex 2>/dev/null && codex --version 2>&1 | head -1 || echo "CODEX_MISSING"
+python3 --version 2>&1 || echo "PYTHON_MISSING"
+pip3 show httpx 2>/dev/null | grep Version || echo "HTTPX_MISSING"
 ```
 
 ### If Missing
 
 Tell user:
 ```
-Codex CLI not found.
+Python 3.8+ or httpx library not found.
 
-Install with: npm install -g @openai/codex
-Then authenticate: codex login
+Install dependencies with:
+  cd /path/to/glm-delegator
+  pip3 install -r requirements.txt
 
-After installation, re-run /claude-delegator:setup
+After installation, re-run /glm-delegator:setup
 ```
 
-**STOP here if Codex is not installed.**
+**STOP here if dependencies are missing.**
 
-## Step 2: Read Current Settings
+## Step 2: Check API Key
 
 ```bash
-cat ~/.claude/settings.json 2>/dev/null || echo "{}"
+echo "GLM_API_KEY: ${GLM_API_KEY:+SET}"
+echo "Z_AI_API_KEY: ${Z_AI_API_KEY:+SET}"
 ```
 
-## Step 3: Configure MCP Server
+### If Not Set
 
-Merge into `~/.claude/settings.json`:
+Tell user:
+```
+Z.AI API key not found.
+
+Get your API key from: https://platform.z.ai/
+
+Then set it:
+  export GLM_API_KEY="your_api_key_here"
+
+Or add to ~/.bashrc or ~/.zshrc for persistence.
+```
+
+## Step 3: Get GLM Delegator Path
+
+```bash
+echo "${CLAUDE_PLUGIN_ROOT}"
+```
+
+This should output the path to glm-delegator.
+
+## Step 4: Read Current Settings
+
+```bash
+cat ~/.claude.json 2>/dev/null || cat ~/.claude/settings.json 2>/dev/null || echo "{}"
+```
+
+## Step 5: Configure MCP Server
+
+Merge into `~/.claude.json` (or `~/.claude/settings.json`):
 
 ```json
 {
   "mcpServers": {
-    "codex": {
-      "type": "stdio",
-      "command": "codex",
-      "args": ["-m", "gpt-5.2-codex", "mcp-server"]
+    "glm-delegator": {
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/glm_mcp_server.py"],
+      "env": {
+        "GLM_API_KEY": "${GLM_API_KEY:-${Z_AI_API_KEY}}"
+      }
     }
   }
 }
 ```
 
-Note: Use `gpt-5.2-codex` explicitly for the latest model.
-
 **CRITICAL**:
 - Merge with existing settings, don't overwrite
 - Preserve any existing `mcpServers` entries
+- Replace `${CLAUDE_PLUGIN_ROOT}` with actual path
+- Replace API key with actual value
 
-## Step 4: Install Orchestration Rules
+## Step 6: Install Orchestration Rules
 
 ```bash
-mkdir -p ~/.claude/rules/delegator && cp ${CLAUDE_PLUGIN_ROOT}/rules/*.md ~/.claude/rules/delegator/
+mkdir -p ~/.claude/rules/glm-delegator && cp ${CLAUDE_PLUGIN_ROOT}/rules/*.md ~/.claude/rules/glm-delegator/
 ```
 
-## Step 5: Verify Installation
+## Step 7: Verify Installation
 
 Run these checks and report results:
 
 ```bash
-# Check 1: Codex CLI version
-codex --version 2>&1 | head -1
+# Check 1: Python version
+python3 --version 2>&1
 
-# Check 2: MCP server configured
-cat ~/.claude/settings.json | jq -r '.mcpServers.codex.args | join(" ")' 2>/dev/null
+# Check 2: httpx installed
+pip3 show httpx 2>&1 | grep Version || echo "Not installed"
 
-# Check 3: Rules installed (count files)
-ls ~/.claude/rules/delegator/*.md 2>/dev/null | wc -l
+# Check 3: MCP server configured
+cat ~/.claude.json 2>/dev/null | jq -r '.mcpServers["glm-delegator"].command' 2>/dev/null || \
+cat ~/.claude/settings.json 2>/dev/null | jq -r '.mcpServers["glm-delegator"].command' 2>/dev/null || \
+echo "Not configured"
 
-# Check 4: Auth status (check if logged in)
-codex login status 2>&1 | head -1 || echo "Run 'codex login' to authenticate"
+# Check 4: Server script exists
+ls -la ${CLAUDE_PLUGIN_ROOT}/glm_mcp_server.py 2>/dev/null || echo "Script not found"
+
+# Check 5: Rules installed (count files)
+ls ~/.claude/rules/glm-delegator/*.md 2>/dev/null | wc -l
+
+# Check 6: API key set
+echo "GLM_API_KEY: ${GLM_API_KEY:+SET}"
+echo "Z_AI_API_KEY: ${Z_AI_API_KEY:+SET}"
 ```
 
-## Step 6: Report Status
+## Step 8: Report Status
 
 Display actual values from the checks above:
 
 ```
-claude-delegator Status
+glm-delegator Status
 ───────────────────────────────────────────────────
-Codex CLI:     ✓ [version from check 1]
-Model:         ✓ gpt-5.2-codex (or ✗ if not configured)
-MCP Config:    ✓ ~/.claude/settings.json (or ✗ if missing)
-Rules:         ✓ [N] files in ~/.claude/rules/delegator/
-Auth:          [status from check 4]
+Python:        ✓ [version from check 1]
+Dependencies:  ✓ httpx [version] (or ✗ if missing)
+MCP Config:    ✓ ~/.claude.json (or ✗ if missing)
+Server Script: ✓ glm_mcp_server.py (or ✗ if missing)
+Rules:         ✓ [N] files in ~/.claude/rules/glm-delegator/
+API Key:       ✓ SET (or ✗ if missing)
 ───────────────────────────────────────────────────
 ```
 
 If any check fails, report the specific issue and how to fix it.
 
-## Step 7: Final Instructions
+## Step 9: Final Instructions
 
 ```
 Setup complete!
 
 Next steps:
 1. Restart Claude Code to load MCP server
-2. Authenticate: Run `codex login` in terminal (if not already done)
+2. Set API key if not already: export GLM_API_KEY="your_key"
 
-Five GPT experts available:
+Five GLM-4.7 experts available:
 
 ┌──────────────────┬─────────────────────────────────────────────┐
 │ Architect        │ "How should I structure this service?"      │
@@ -122,7 +165,7 @@ Five GPT experts available:
 │                  │ "What am I missing in these requirements?"  │
 │                  │ → Pre-planning, catches ambiguities         │
 ├──────────────────┼─────────────────────────────────────────────┤
-│ Code Reviewer    │ "Review this PR"                            │
+│ Code Reviewer    │ "Review this PR" (EN/FR/CN)                 │
 │                  │ "Find issues in this implementation"        │
 │                  │ → Code quality, bugs, maintainability       │
 ├──────────────────┼─────────────────────────────────────────────┤
@@ -133,23 +176,25 @@ Five GPT experts available:
 
 Every expert can advise (read-only) OR implement (write).
 Expert is auto-detected based on your request.
-Explicit: "Ask GPT to review..." or "Have GPT fix..."
+Explicit: "Ask GLM to review..." or "Have GLM fix..."
+
+Documentation: https://github.com/kev/glm-delegator
 ```
 
-## Step 8: Ask About Starring
+## Step 10: Ask About Starring
 
-Use AskUserQuestion to ask the user if they'd like to ⭐ star the claude-delegator repository on GitHub to support the project.
+Use AskUserQuestion to ask the user if they'd like to ⭐ star the glm-delegator repository on GitHub to support the project.
 
 Options: "Yes, star the repo" / "No thanks"
 
 **If yes**: Check if `gh` CLI is available and run:
 ```bash
-gh api -X PUT /user/starred/jarrodwatts/claude-delegator
+gh api -X PUT /user/starred/kev/glm-delegator
 ```
 
 If `gh` is not available or the command fails, provide the manual link:
 ```
-https://github.com/jarrodwatts/claude-delegator
+https://github.com/kev/glm-delegator
 ```
 
 **If no**: Thank them and complete setup without starring.

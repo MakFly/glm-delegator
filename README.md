@@ -1,22 +1,25 @@
-# GLM Delegator
+# LLM Delegator
 
-> GLM-4.7 expert subagents for Claude Code — A fork of [claude-delegator](https://github.com/jarrodwatts/claude-delegator) adapted for Z.AI's GLM models
+> Multi-provider LLM expert subagents for Claude Code — A fork of [claude-delegator](https://github.com/jarrodwatts/claude-delegator) supporting **any LLM backend**
 
-GLM expert subagents for Claude Code. Five specialists that can analyze AND implement—architecture, security, code review, and more.
+LLM expert subagents for Claude Code. Five specialists that can analyze AND implement—architecture, security, code review, and more.
+
+**Supports:** Anthropic Claude, OpenAI GPT, GLM-4.7, Ollama, Groq, DeepInfra, and any OpenAI/Anthropic-compatible API.
 
 [![License](https://img.shields.io/github/license/MakFly/glm-delegator?v=2)](LICENSE)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## What is GLM Delegator?
+## What is LLM Delegator?
 
-Claude gains a team of GLM-4.7 specialists via MCP. Each expert has a distinct specialty and can advise OR implement.
+Claude gains a team of LLM specialists via MCP. Each expert has a distinct specialty and can advise OR implement.
 
 | What You Get | Why It Matters |
 |--------------|----------------|
 | **5 domain experts** | Right specialist for each problem type |
 | **Dual mode** | Experts can analyze (read-only) or implement (write) |
+| **Multi-provider** | Use Claude, GPT-4, GLM, Ollama, or any compatible API |
 | **Auto-routing** | Claude detects when to delegate based on your request |
-| **Synthesized responses** | Claude interprets GLM output, never raw passthrough |
+| **Synthesized responses** | Claude interprets LLM output, never raw passthrough |
 | **Multilingual** | Code Review supports EN/FR/CN (中文) |
 
 ### The Experts
@@ -31,10 +34,11 @@ Claude gains a team of GLM-4.7 specialists via MCP. Each expert has a distinct s
 
 ## Differences from claude-delegator
 
-| Feature | claude-delegator | glm-delegator |
+| Feature | claude-delegator | llm-delegator |
 |---------|------------------|---------------|
-| Backend | Codex GPT-5.2 | GLM-4.7 (Z.AI) |
-| API | OpenAI Codex CLI | Custom MCP server with Z.AI Anthropic-compatible API |
+| Backend | Codex GPT-5.2 only | **Any LLM provider** |
+| Configuration | CLI args only | CLI args (same model) |
+| Providers | Single | Multi-provider (OpenAI, Anthropic, Ollama, etc.) |
 | Code Review | English only | **EN/FR/CN multilingual** |
 | Security | OWASP | OWASP + Chinese MLPS standards |
 | License | MIT | MIT |
@@ -44,7 +48,7 @@ Claude gains a team of GLM-4.7 specialists via MCP. Each expert has a distinct s
 ### Prerequisites
 
 - **Python 3.8+** for the MCP server
-- **Z.AI API Key** - Get one from [Z.AI Platform](https://platform.z.ai/)
+- **API Key** for your chosen provider (Anthropic, OpenAI, Z.AI, etc.)
 - **httpx** library - `pip install -r requirements.txt`
 
 ### Step 1: Install Dependencies
@@ -56,18 +60,26 @@ pip install -r requirements.txt
 
 ### Step 2: Configure API Key
 
-Set your Z.AI API key as an environment variable:
+Set your API key as an environment variable:
 
 ```bash
+# Anthropic Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
+
+# OpenAI
+export OPENAI_API_KEY="sk-..."
+
+# GLM via Z.AI
 export GLM_API_KEY="your_z_ai_api_key_here"
-# Or use Z_AI_API_KEY (also supported)
-export Z_AI_API_KEY="your_z_ai_api_key_here"
+
+# Groq
+export GROQ_API_KEY="gsk_..."
 ```
 
 For persistent configuration, add to your `~/.bashrc` or `~/.zshrc`:
 
 ```bash
-echo 'export GLM_API_KEY="your_z_ai_api_key_here"' >> ~/.bashrc
+echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.bashrc
 source ~/.bashrc
 ```
 
@@ -75,15 +87,80 @@ source ~/.bashrc
 
 Add to `~/.claude.json` (or `~/.claude/settings.json`):
 
+#### Using Anthropic Claude
+
 ```json
 {
   "mcpServers": {
-    "glm-delegator": {
+    "claude-experts": {
+      "type": "stdio",
       "command": "python3",
-      "args": ["/path/to/glm-delegator/glm_mcp_server.py"],
-      "env": {
-        "GLM_API_KEY": "your_z_ai_api_key_here"
-      }
+      "args": [
+        "/path/to/glm-delegator/glm_mcp_server.py",
+        "--provider", "anthropic-compatible",
+        "--base-url", "https://api.anthropic.com/v1",
+        "--api-key", "$ANTHROPIC_API_KEY",
+        "--model", "claude-sonnet-4-20250514"
+      ]
+    }
+  }
+}
+```
+
+#### Using OpenAI GPT
+
+```json
+{
+  "mcpServers": {
+    "openai-experts": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "/path/to/glm-delegator/glm_mcp_server.py",
+        "--provider", "openai-compatible",
+        "--base-url", "https://api.openai.com/v1",
+        "--api-key", "$OPENAI_API_KEY",
+        "--model", "gpt-4o"
+      ]
+    }
+  }
+}
+```
+
+#### Using Ollama (Local)
+
+```json
+{
+  "mcpServers": {
+    "ollama-experts": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "/path/to/glm-delegator/glm_mcp_server.py",
+        "--provider", "openai-compatible",
+        "--base-url", "http://localhost:11434/v1",
+        "--model", "llama3.1"
+      ]
+    }
+  }
+}
+```
+
+#### Using GLM via Z.AI
+
+```json
+{
+  "mcpServers": {
+    "glm-experts": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "/path/to/glm-delegator/glm_mcp_server.py",
+        "--provider", "anthropic-compatible",
+        "--base-url", "https://api.z.ai/api/anthropic",
+        "--api-key", "$GLM_API_KEY",
+        "--model", "glm-4.7"
+      ]
     }
   }
 }
@@ -93,15 +170,37 @@ Add to `~/.claude.json` (or `~/.claude/settings.json`):
 
 Restart Claude Code to load the MCP server.
 
-### Alternative: Using the setup command
+## Supported Providers
 
-Inside Claude Code, run:
+| Provider | Type | Example Model |
+|----------|------|---------------|
+| **Anthropic** | anthropic-compatible | claude-sonnet-4-20250514 |
+| **OpenAI** | openai-compatible | gpt-4o |
+| **GLM (Z.AI)** | anthropic-compatible | glm-4.7 |
+| **Ollama** | openai-compatible | llama3.1 |
+| **Groq** | openai-compatible | llama-3.3-70b-versatile |
+| **DeepInfra** | openai-compatible | deepseek-ai/DeepSeek-V3 |
+| **TogetherAI** | openai-compatible | meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo |
+| **vLLM** | openai-compatible | (custom) |
+| **LM Studio** | openai-compatible | (custom) |
+
+> **Any OpenAI-compatible or Anthropic-compatible API will work!**
+
+## Command-Line Options
 
 ```
-/glm-delegator:setup
-```
+python3 glm_mcp_server.py --help
 
-This will guide you through the installation process.
+Options:
+  -p, --provider      Provider type: openai-compatible or anthropic-compatible
+  -u, --base-url      Base URL of the API
+  -k, --api-key       API key (default: GLM_API_KEY or Z_AI_API_KEY env var)
+  -m, --model         Model name
+  --api-version       API version for Anthropic-compatible (default: 2023-06-01)
+  --timeout           Request timeout in seconds (default: 600)
+  --max-tokens        Maximum tokens for responses (default: 8192)
+  --debug             Enable debug logging
+```
 
 ## Usage
 
@@ -109,12 +208,12 @@ Once installed, delegation happens automatically. Claude Code will detect when t
 
 ### Explicit Delegation
 
-You can also explicitly request GLM expert help:
+You can also explicitly request LLM expert help:
 
 ```
-"Ask GLM to review this authentication flow"
-"Use GLM architect to design this API"
-"Have GLM security analyst review this code"
+"Ask the architect to review this authentication flow"
+"Use the code reviewer to analyze this function"
+"Have the security analyst check this code"
 ```
 
 ### Manual Tool Call
@@ -148,8 +247,8 @@ Claude: [Detects security question → selects Security Analyst]
         │  mcp__glm-delegator__glm_   │
         │  security_analyst           │
         │  → Security Analyst prompt  │
-        │  → GLM-4.7 analyzes your    │
-        │    code via Z.AI API        │
+        │  → LLM analyzes your code   │
+        │    via configured API       │
         └─────────────────────────────┘
                     ↓
 Claude: "Based on the analysis, I found 3 issues..."
@@ -158,16 +257,18 @@ Claude: "Based on the analysis, I found 3 issues..."
 
 ## Configuration
 
-### Environment Variables
+### Command-Line Arguments
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GLM_API_KEY` | Yes* | - | Your Z.AI API key |
-| `Z_AI_API_KEY` | Yes* | - | Alternative to GLM_API_KEY |
-| `GLM_BASE_URL` | No | `https://api.z.ai/api/anthropic` | Z.AI API endpoint |
-| `GLM_MODEL` | No | `glm-4.7` | GLM model to use |
-
-*Either `GLM_API_KEY` or `Z_AI_API_KEY` is required.
+| Argument | Short | Default | Description |
+|----------|-------|---------|-------------|
+| `--provider` | `-p` | `anthropic-compatible` | Provider type |
+| `--base-url` | `-u` | `https://api.z.ai/api/anthropic` | API base URL |
+| `--api-key` | `-k` | `$GLM_API_KEY` | API key |
+| `--model` | `-m` | `glm-4.7` | Model name |
+| `--api-version` | - | `2023-06-01` | Anthropic API version |
+| `--timeout` | - | `600` | Timeout (seconds) |
+| `--max-tokens` | - | `8192` | Max tokens per response |
+| `--debug` | - | `false` | Debug logging |
 
 ### Operating Modes
 
@@ -180,32 +281,43 @@ Every expert supports two modes based on the task:
 
 Claude automatically selects the mode based on your request.
 
-## Customizing Expert Prompts
+## Multiple Servers
 
-Expert prompts are embedded in `glm_mcp_server.py` (EXPERT_PROMPTS dictionary). Each follows the same structure:
-- Role definition and context
-- Advisory vs Implementation modes
-- Response format guidelines
-- When to invoke / when NOT to invoke
+You can configure multiple servers with different providers:
 
-Edit the `EXPERT_PROMPTS` dictionary in `glm_mcp_server.py` to customize expert behavior for your workflow.
+```json
+{
+  "mcpServers": {
+    "claude-experts": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/path/to/glm_mcp_server.py", "--provider", "anthropic-compatible", "--base-url", "https://api.anthropic.com/v1", "--api-key", "$ANTHROPIC_API_KEY", "--model", "claude-sonnet-4-20250514"]
+    },
+    "ollama-local": {
+      "type": "stdio",
+      "command": "python3",
+      "args": ["/path/to/glm_mcp_server.py", "--provider", "openai-compatible", "--base-url", "http://localhost:11434/v1", "--model", "llama3.1"]
+    }
+  }
+}
+```
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
 | MCP server not found | Restart Claude Code after configuration |
-| GLM authentication failed | Verify your API key is correct and active |
-| Tool not appearing | Check `~/.claude.json` has glm-delegator entry |
-| Expert not triggered | Try explicit: "Ask GLM to review this architecture" |
+| Authentication failed | Verify your API key is correct and active |
+| Tool not appearing | Check `~/.claude.json` has correct entry |
+| Expert not triggered | Try explicit: "Ask the architect to review this" |
 | Python not found | Ensure Python 3.8+ is in your PATH |
 
 ### Debug Mode
 
-To see MCP server logs, check stderr output or run manually:
+Run with `--debug` to see detailed logs:
 
 ```bash
-python3 glm_mcp_server.py 2>&1
+python3 glm_mcp_server.py --debug --provider anthropic-compatible --api-key $ANTHROPIC_API_KEY
 ```
 
 ## Development
@@ -217,8 +329,12 @@ cd glm-delegator
 # Install dependencies
 pip install -r requirements.txt
 
-# Test locally
-python3 glm_mcp_server.py
+# Test locally with a specific provider
+python3 glm_mcp_server.py \
+  --provider openai-compatible \
+  --base-url http://localhost:11434/v1 \
+  --model llama3.1 \
+  --debug
 ```
 
 ## Architecture
@@ -227,7 +343,8 @@ python3 glm_mcp_server.py
 
 | Component | Purpose |
 |-----------|---------|
-| `glm_mcp_server.py` | MCP server implementation with GLM API integration |
+| `glm_mcp_server.py` | MCP server with argparse-based configuration |
+| `providers.py` | Provider abstraction layer (OpenAI/Anthropic-compatible) |
 | `prompts/*.md` | Expert personality definitions (for reference) |
 | `rules/*.md` | Delegation rules and triggers (for reference) |
 | `.claude-plugin/plugin.json` | Plugin metadata |
@@ -237,18 +354,24 @@ python3 glm_mcp_server.py
 ```
 Claude Code → MCP Request → glm_mcp_server.py
                                 ↓
-                        Z.AI API (Anthropic-compatible)
+                        Provider Layer (providers.py)
                                 ↓
-                            GLM-4.7
+                        Configured API (OpenAI/Anthropic/etc.)
+                                ↓
+                            LLM Response
                                 ↓
                         Response → Claude Code
 ```
+
+## Documentation
+
+- **[BACKEND_CONFIG.md](BACKEND_CONFIG.md)** - Detailed multi-provider configuration guide
 
 ## Acknowledgments
 
 - Based on [claude-delegator](https://github.com/jarrodwatts/claude-delegator) by [Jarrod Watts](https://github.com/jarrodwatts)
 - Expert prompts adapted from [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) by [@code-yeongyu](https://github.com/code-yeongyu)
-- Uses Z.AI's [Anthropic-compatible API](https://docs.z.ai/devpack/mcp)
+- Uses Z.AI's [Anthropic-compatible API](https://docs.z.ai/devpack/mcp) for GLM support
 
 ## License
 

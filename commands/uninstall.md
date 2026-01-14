@@ -1,17 +1,18 @@
 ---
 name: uninstall
-description: Uninstall claude-delegator (remove MCP config and rules)
+description: Uninstall glm-delegator (remove MCP config and rules)
 allowed-tools: Bash, Read, Write, Edit, AskUserQuestion
 timeout: 30000
 ---
 
 # Uninstall
 
-Remove claude-delegator from Claude Code.
+Remove glm-delegator from Claude Code.
 
 ## Confirm Removal
 
-**Question**: "Remove Codex MCP configuration and plugin rules?"
+**Question**: "Remove GLM Delegator MCP configuration and plugin rules?"
+
 **Options**:
 - "Yes, uninstall"
 - "No, cancel"
@@ -20,19 +21,19 @@ If cancelled, stop here.
 
 ## Remove MCP Configuration
 
-Read `~/.claude/settings.json`, delete `mcpServers.codex` entry, write back.
+Read `~/.claude.json` (or `~/.claude/settings.json`), delete `mcpServers.glm-delegator` entry, write back.
 
 ## Remove Installed Rules
 
 ```bash
-rm -rf ~/.claude/rules/delegator/
+rm -rf ~/.claude/rules/glm-delegator/
 ```
 
 ## Confirm Completion
 
 ```
-✓ Removed 'codex' from MCP servers
-✓ Removed rules from ~/.claude/rules/delegator/
+✓ Removed 'glm-delegator' from MCP servers
+✓ Removed rules from ~/.claude/rules/glm-delegator/
 
-To reinstall: /claude-delegator:setup
+To reinstall: /glm-delegator:setup
 ```
