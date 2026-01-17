@@ -239,10 +239,10 @@ class AnthropicCompatibleProvider(BaseProvider):
         if "top_p" in kwargs:
             payload["top_p"] = kwargs["top_p"]
 
-        logger.debug(f"Calling {self.config.baseUrl}/messages")
+        logger.debug(f"Calling {self.config.baseUrl}/v1/messages")
 
         try:
-            response = await self._client.post("/messages", json=payload)
+            response = await self._client.post("/v1/messages", json=payload)
             response.raise_for_status()
             data = response.json()
 
@@ -258,11 +258,16 @@ class AnthropicCompatibleProvider(BaseProvider):
             )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"Anthropic-compatible API error: {e.response.status_code}")
-            raise
+            error_body = e.response.text
+            logger.error(f"Anthropic-compatible API error: {e.response.status_code} - {error_body}")
+            if e.response.status_code == 429:
+                raise RuntimeError(f"Rate limit exceeded or insufficient credits. Details: {error_body}")
+            elif e.response.status_code == 401:
+                raise RuntimeError(f"Invalid API key. Details: {error_body}")
+            raise RuntimeError(f"API error {e.response.status_code}: {error_body}")
         except (KeyError, IndexError) as e:
             logger.error(f"Unexpected response format: {e}")
-            raise
+            raise RuntimeError(f"Unexpected API response format: {e}")
 
 
 # =============================================================================
