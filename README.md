@@ -365,7 +365,8 @@ Claude Code → MCP Request → glm_mcp_server.py
 
 ## Documentation
 
-- **[BACKEND_CONFIG.md](BACKEND_CONFIG.md)** - Detailed multi-provider configuration guide
+- **[USAGE.md](USAGE.md)** - 📖 Guide d'utilisation complet avec exemples et scénarios
+- **[BACKEND_CONFIG.md](BACKEND_CONFIG.md)** - Configuration multi-provider détaillée
 
 ## Acknowledgments
 
