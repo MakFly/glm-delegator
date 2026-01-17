@@ -634,17 +634,21 @@ async def handle_message(message: dict):
             }
         }
 
+    elif message.get("method") == "notifications/initialized":
+        # Client notification - no response needed
+        return None
+
     elif message.get("method") == "tools/list":
         if server:
             await server.start()
-            return await server.list_tools()
+            return {"result": await server.list_tools()}
 
     elif message.get("method") == "tools/call":
         if server:
             params = message.get("params", {})
             name = params.get("name")
             arguments = params.get("arguments", {})
-            return await server.call_tool(name, arguments)
+            return {"result": await server.call_tool(name, arguments)}
 
     else:
         return {
@@ -671,13 +675,7 @@ async def main():
     if logger:
         logger.info("LLM Delegator MCP Server starting...")
 
-    # Send initialized notification
-    await send_jsonrpc({
-        "jsonrpc": "2.0",
-        "method": "notifications/initialized"
-    })
-
-    # Process stdin/stdout
+    # Process stdin/stdout (wait for client to initiate handshake)
     while True:
         try:
             line = await asyncio.get_event_loop().run_in_executor(
@@ -689,7 +687,8 @@ async def main():
             message = json.loads(line.strip())
             response = await handle_message(message)
 
-            if "id" in message:
+            # Only send response for requests (with id), not notifications
+            if "id" in message and response is not None:
                 response["id"] = message["id"]
                 response["jsonrpc"] = "2.0"
                 await send_jsonrpc(response)
