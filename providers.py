@@ -178,11 +178,17 @@ class OpenAICompatibleProvider(BaseProvider):
             )
 
         except httpx.HTTPStatusError as e:
-            logger.error(f"OpenAI-compatible API error: {e.response.status_code}")
-            raise
+            error_body = e.response.text
+            logger.error(f"OpenAI-compatible API error: {e.response.status_code} - {error_body}")
+            # Provide helpful error messages
+            if e.response.status_code == 429:
+                raise RuntimeError(f"Rate limit exceeded or insufficient credits. Check your Z.AI balance. Details: {error_body}")
+            elif e.response.status_code == 401:
+                raise RuntimeError(f"Invalid API key. Check your Z.AI API key. Details: {error_body}")
+            raise RuntimeError(f"API error {e.response.status_code}: {error_body}")
         except (KeyError, IndexError) as e:
             logger.error(f"Unexpected response format: {e}")
-            raise
+            raise RuntimeError(f"Unexpected API response format: {e}")
 
 
 # =============================================================================

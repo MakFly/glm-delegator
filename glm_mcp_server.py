@@ -714,6 +714,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         if logger:
             logger.info("Shutting down...")
-    finally:
-        if server:
-            asyncio.run(server.stop())
