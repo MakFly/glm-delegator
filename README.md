@@ -6,7 +6,7 @@ LLM expert subagents for Claude Code. Five specialists that can analyze AND impl
 
 **Supports:** Anthropic Claude, OpenAI GPT, GLM-4.7, GLM-5, Ollama, Groq, DeepInfra, and any OpenAI/Anthropic-compatible API.
 
-[![License](https://img.shields.io/github/license/MakFly/glm-delegator?v=2)](LICENSE)
+[![License](https://img.shields.io/github/license/dev-toolings/cc-delegator?v=2)](LICENSE)
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## What is LLM Delegator?
@@ -58,7 +58,7 @@ Claude gains a team of LLM specialists via MCP. Each expert has a distinct speci
 ### Step 1: Install Dependencies
 
 ```bash
-cd glm-delegator
+cd cc-delegator
 pip install -r requirements.txt
 ```
 
@@ -495,7 +495,7 @@ python3 glm_mcp_server.py --debug --provider anthropic-compatible --api-key $ANT
 ## Development
 
 ```bash
-git clone https://github.com/MakFly/glm-delegator
+git clone https://github.com/dev-toolings/cc-delegator
 cd glm-delegator
 
 # Install dependencies
